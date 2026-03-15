@@ -1,0 +1,7 @@
+numpy
+pandas
+jupyterlab
+ipykernel
+seaborn 
+scikit-learn
+wordcloud

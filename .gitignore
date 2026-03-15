@@ -1,0 +1,9 @@
+**
+
+!.env.example
+!data/
+!.gitignore
+!environment.yml
+!README.md
+!requirements.txt
+!notebooks/
