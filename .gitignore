@@ -7,3 +7,14 @@
 !README.md
 !requirements.txt
 !notebooks/
+!src/
+!src/*
+!src/data/*
+!src/model/*
+!setupup.py
+!dvc.yaml
+!params.yaml
+!setup.py
+!.dvc
+!.dvc/config
+!dvc.lock

@@ -1,4 +1,4 @@
-name: YTsentimentAnalyzer 
+name: YTsentimentAnalyzer
 channels:
   - conda-forge
   - defaults
