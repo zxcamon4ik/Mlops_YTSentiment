@@ -1,16 +1,18 @@
+# EDA & preprocessing
 numpy
 pandas
 jupyterlab
 ipykernel
 seaborn 
-scikit-learn
+scikit-learn==1.8.0
 wordcloud
 
+# production
 boto3
 Flask
 Flask_Cors
 joblib
-lightgbm
+lightgbm==4.5.0
 matplotlib
 mlflow
 dvc

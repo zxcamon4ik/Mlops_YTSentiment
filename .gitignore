@@ -18,3 +18,9 @@
 !.dvc
 !.dvc/config
 !dvc.lock
+!scripts/
+!scripts/*
+!plugin-frontend
+!plugin-frontend/*
+!flask_api/
+!flask_api/*
