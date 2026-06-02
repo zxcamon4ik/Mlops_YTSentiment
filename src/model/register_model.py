@@ -4,14 +4,17 @@ import json
 import mlflow
 import logging
 import os
+import time
 
 from dotenv import load_dotenv
 from pathlib import Path
 
+from src.model.config import get_mlflow_tracking_uri, get_model_alias, get_model_name, get_model_stage
+
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 # Set up MLflow tracking URI
-mlflow.set_tracking_uri(os.environ["SERVER_URL"])
+mlflow.set_tracking_uri(get_mlflow_tracking_uri())
 
 # logging configuration
 logger = logging.getLogger('model_registration')
@@ -44,6 +47,33 @@ def load_model_info(file_path: str) -> dict:
         logger.error('Unexpected error occurred while loading the model info: %s', e)
         raise
 
+def wait_until_ready(client: mlflow.tracking.MlflowClient, model_name: str, version: str) -> None:
+    for _ in range(60):
+        model_version = client.get_model_version(model_name, version)
+        if getattr(model_version, "status", "READY") == "READY":
+            return
+        time.sleep(1)
+    raise TimeoutError(f"Model {model_name} version {version} did not become READY")
+
+
+def set_serving_target(client: mlflow.tracking.MlflowClient, model_name: str, version: str) -> None:
+    model_alias = get_model_alias()
+    model_stage = get_model_stage()
+
+    if hasattr(client, "set_registered_model_alias") and model_alias:
+        client.set_registered_model_alias(model_name, model_alias, version)
+        logger.debug("Set alias %s for model %s version %s", model_alias, model_name, version)
+
+    if model_stage:
+        client.transition_model_version_stage(
+            name=model_name,
+            version=version,
+            stage=model_stage,
+            archive_existing_versions=True,
+        )
+        logger.debug("Transitioned model %s version %s to %s", model_name, version, model_stage)
+
+
 def register_model(model_name: str, model_info: dict):
     """Register the model to the MLflow Model Registry."""
     try:
@@ -51,16 +81,11 @@ def register_model(model_name: str, model_info: dict):
         
         # Register the model
         model_version = mlflow.register_model(model_uri, model_name)
-        
-        # Transition the model to "Staging" stage
         client = mlflow.tracking.MlflowClient()
-        client.transition_model_version_stage(
-            name=model_name,
-            version=model_version.version,
-            stage="Staging"
-        )
+        wait_until_ready(client, model_name, model_version.version)
+        set_serving_target(client, model_name, model_version.version)
         
-        logger.debug(f'Model {model_name} version {model_version.version} registered and transitioned to Staging.')
+        logger.debug('Model %s version %s registered and set as serving target.', model_name, model_version.version)
     except Exception as e:
         logger.error('Error during model registration: %s', e)
         raise
@@ -70,12 +95,12 @@ def main():
         model_info_path = 'experiment_info.json'
         model_info = load_model_info(model_info_path)
         
-        # model_name = "yt_chrome_plugin_model"
-        model_name = "my_model"
+        model_name = get_model_name()
         register_model(model_name, model_info)
     except Exception as e:
         logger.error('Failed to complete the model registration process: %s', e)
         print(f"Error: {e}")
+        raise
 
 if __name__ == '__main__':
     main()

@@ -14,9 +14,12 @@
 !src/*
 !src/data/*
 !src/model/*
+!src/common/
+!src/common/*
 !setupup.py
 !dvc.yaml
 !params.yaml
+!pytest.ini
 !setup.py
 !.dvc
 !.dvc/config
@@ -27,3 +30,7 @@
 !plugin-frontend/*
 !flask_api/
 !flask_api/*
+!api/
+!api/*
+!tests/
+!tests/*

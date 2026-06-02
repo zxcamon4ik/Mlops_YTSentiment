@@ -6,7 +6,6 @@ import yaml
 import mlflow
 import mlflow.sklearn
 from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.feature_extraction.text import TfidfVectorizer
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -14,6 +13,13 @@ import json
 from mlflow.models import infer_signature
 from dotenv import load_dotenv
 from pathlib import Path
+
+from src.model.config import (
+    DEFAULT_MODEL_ARTIFACT_PATH,
+    DEFAULT_PIPELINE_PATH,
+    get_mlflow_tracking_uri,
+    get_model_name,
+)
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
@@ -59,18 +65,6 @@ def load_model(model_path: str):
         raise
 
 
-def load_vectorizer(vectorizer_path: str) -> TfidfVectorizer:
-    """Load the saved TF-IDF vectorizer."""
-    try:
-        with open(vectorizer_path, 'rb') as file:
-            vectorizer = pickle.load(file)
-        logger.debug('TF-IDF vectorizer loaded from %s', vectorizer_path)
-        return vectorizer
-    except Exception as e:
-        logger.error('Error loading vectorizer from %s: %s', vectorizer_path, e)
-        raise
-
-
 def load_params(params_path: str) -> dict:
     """Load parameters from a YAML file."""
     try:
@@ -88,7 +82,7 @@ def evaluate_model(model, X_test: np.ndarray, y_test: np.ndarray):
     try:
         # Predict and calculate classification metrics
         y_pred = model.predict(X_test)
-        report = classification_report(y_test, y_pred, output_dict=True)
+        report = classification_report(y_test, y_pred, output_dict=True, zero_division=0)
         cm = confusion_matrix(y_test, y_pred)
         
         logger.debug('Model evaluation completed')
@@ -119,7 +113,8 @@ def save_model_info(run_id: str, model_path: str, file_path: str) -> None:
         # Create a dictionary with the info you want to save
         model_info = {
             'run_id': run_id,
-            'model_path': model_path
+            'model_path': model_path,
+            'model_name': get_model_name(),
         }
         # Save the dictionary as a JSON file
         with open(file_path, 'w') as file:
@@ -131,7 +126,7 @@ def save_model_info(run_id: str, model_path: str, file_path: str) -> None:
 
 
 def main():
-    mlflow.set_tracking_uri(os.environ["SERVER_URL"])
+    mlflow.set_tracking_uri(get_mlflow_tracking_uri())
 
     mlflow.set_experiment('dvc-pipeline-runs')
     
@@ -141,45 +136,41 @@ def main():
             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
             params = load_params(os.path.join(root_dir, 'params.yaml'))
 
-            # Log parameters
-            for key, value in params.items():
-                mlflow.log_param(key, value)
+            # Log parameters without fabricating metrics.
+            for section, values in params.items():
+                if isinstance(values, dict):
+                    for key, value in values.items():
+                        mlflow.log_param(f"{section}.{key}", value)
+                else:
+                    mlflow.log_param(section, values)
             
-            # Load model and vectorizer
-            model = load_model(os.path.join(root_dir, 'lgbm_model.pkl'))
-            vectorizer = load_vectorizer(os.path.join(root_dir, 'tfidf_vectorizer.pkl'))
+            # Load the packaged preprocessing + TF-IDF + LightGBM pipeline.
+            model = load_model(os.path.join(root_dir, DEFAULT_PIPELINE_PATH))
 
             # Load test data for signature inference
             test_data = load_data(os.path.join(root_dir, 'data/interim/test_processed.csv'))
 
             # Prepare test data
-            X_test_tfidf = vectorizer.transform(test_data['clean_comment'].values)
+            X_test = test_data['clean_comment'].fillna('').astype(str).tolist()
             y_test = test_data['category'].values
 
-            # Create a DataFrame for signature inference (using first few rows as an example)
-            input_example = pd.DataFrame(X_test_tfidf.toarray()[:5], columns=vectorizer.get_feature_names_out())  # <--- Added for signature
+            input_example = X_test[:5]
+            signature = infer_signature(input_example, model.predict(input_example))
 
-            # Infer the signature
-            signature = infer_signature(input_example, model.predict(X_test_tfidf[:5]))  # <--- Added for signature
-
-            # Log model with signature
+            # Log the complete inference pipeline with signature.
             mlflow.sklearn.log_model(
                 model,
-                "lgbm_model",
-                signature=signature,  # <--- Added for signature
-                input_example=input_example  # <--- Added input example
+                DEFAULT_MODEL_ARTIFACT_PATH,
+                signature=signature,
+                input_example=input_example,
             )
 
             # Save model info
-            # artifact_uri = mlflow.get_artifact_uri()
-            mlflow.get_artifact_uri("lgbm_model")
-            save_model_info(run.info.run_id, "lgbm_model", "experiment_info.json")
-
-            # Log the vectorizer as an artifact
-            mlflow.log_artifact(os.path.join(root_dir, 'tfidf_vectorizer.pkl'))
+            mlflow.get_artifact_uri(DEFAULT_MODEL_ARTIFACT_PATH)
+            save_model_info(run.info.run_id, DEFAULT_MODEL_ARTIFACT_PATH, "experiment_info.json")
 
             # Evaluate model and get metrics
-            report, cm = evaluate_model(model, X_test_tfidf, y_test)
+            report, cm = evaluate_model(model, X_test, y_test)
 
             # Log classification report metrics for the test data
             for label, metrics in report.items():
@@ -201,6 +192,7 @@ def main():
         except Exception as e:
             logger.error(f"Failed to complete model evaluation: {e}")
             print(f"Error: {e}")
+            raise
 
 if __name__ == '__main__':
     main()

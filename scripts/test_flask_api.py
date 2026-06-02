@@ -1,8 +1,14 @@
 import pytest
 import requests
-import json
+import os
 
-BASE_URL = "http://localhost:5000"  # Replace with your deployed URL if needed
+pytestmark = pytest.mark.integration
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    pytestmark = [pytestmark, pytest.mark.skip(reason="Set RUN_INTEGRATION_TESTS=1 to run API integration checks")]
+
+
+BASE_URL = os.getenv("API_URL", "http://localhost:5000")
 
 def test_predict_endpoint():
     data = {

@@ -1,25 +1,24 @@
-# EDA & preprocessing
+fastapi
+uvicorn
+pydantic
+python-dotenv
+
 numpy
 pandas
-jupyterlab
-ipykernel
-seaborn 
 scikit-learn==1.5.2
-wordcloud
-
-# production
-boto3
-Flask
-Flask_Cors
-joblib
 lightgbm==4.5.0
 matplotlib
+seaborn
+wordcloud
+nltk
+
 mlflow
 dvc
-dvc[s3]
-nltk
-numpy
-pandas
-wordcloud
-seaborn
+joblib
+requests
+
+pytest
+pytest-mock
+httpx
+
 -e .

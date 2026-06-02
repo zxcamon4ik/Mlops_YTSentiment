@@ -1,6 +1,5 @@
 import pytest
 import pandas as pd
-import pickle
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import mlflow
 
@@ -11,42 +10,32 @@ import os
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-# Set your remote tracking URI
-mlflow.set_tracking_uri(os.environ["SERVER_URL"])
+from src.model.config import get_mlflow_tracking_uri, get_model_alias, get_model_name
 
-@pytest.mark.parametrize("model_name, stage, holdout_data_path, vectorizer_path", [
-    ("yt_chrome_plugin_model", "staging", "data/interim/test_processed.csv", "tfidf_vectorizer.pkl"),  # Replace with your actual paths
-])
-def test_model_performance(model_name, stage, holdout_data_path, vectorizer_path):
+pytestmark = pytest.mark.integration
+
+if os.getenv("RUN_INTEGRATION_TESTS") != "1":
+    pytestmark = [pytestmark, pytest.mark.skip(reason="Set RUN_INTEGRATION_TESTS=1 to run MLflow integration checks")]
+
+
+mlflow.set_tracking_uri(get_mlflow_tracking_uri())
+
+
+def test_model_performance():
+    model_name = get_model_name()
+    model_alias = get_model_alias()
+    holdout_data_path = "data/interim/test_processed.csv"
+
     try:
-        # Load the model from MLflow
-        client = mlflow.tracking.MlflowClient()
-        latest_version_info = client.get_latest_versions(model_name, stages=[stage])
-        latest_version = latest_version_info[0].version if latest_version_info else None
-
-        assert latest_version is not None, f"No model found in the '{stage}' stage for '{model_name}'"
-
-        model_uri = f"models:/{model_name}/{latest_version}"
+        model_uri = f"models:/{model_name}@{model_alias}"
         model = mlflow.pyfunc.load_model(model_uri)
-
-        # Load the vectorizer
-        with open(vectorizer_path, 'rb') as file:
-            vectorizer = pickle.load(file)
 
         # Load the holdout test data
         holdout_data = pd.read_csv(holdout_data_path)
-        X_holdout_raw = holdout_data.iloc[:, :-1].squeeze()  # Raw text features (assuming text is in the first column)
-        y_holdout = holdout_data.iloc[:, -1]  # Labels
+        X_holdout_raw = holdout_data["clean_comment"].fillna("").astype(str)
+        y_holdout = holdout_data["category"]
 
-        # Handle NaN values in the text data
-        X_holdout_raw = X_holdout_raw.fillna("")
-
-        # Apply TF-IDF transformation
-        X_holdout_tfidf = vectorizer.transform(X_holdout_raw)
-        X_holdout_tfidf_df = pd.DataFrame(X_holdout_tfidf.toarray(), columns=vectorizer.get_feature_names_out())
-
-        # Predict using the model
-        y_pred_new = model.predict(X_holdout_tfidf_df)
+        y_pred_new = model.predict(X_holdout_raw.tolist())
 
         # Calculate performance metrics
         accuracy_new = accuracy_score(y_holdout, y_pred_new)
@@ -67,7 +56,7 @@ def test_model_performance(model_name, stage, holdout_data_path, vectorizer_path
         assert recall_new >= expected_recall, f'Recall should be at least {expected_recall}, got {recall_new}'
         assert f1_new >= expected_f1, f'F1 score should be at least {expected_f1}, got {f1_new}'
 
-        print(f"Performance test passed for model '{model_name}' version {latest_version}")
+        print(f"Performance test passed for model '{model_name}' alias '{model_alias}'")
 
     except Exception as e:
         pytest.fail(f"Model performance test failed with error: {e}")

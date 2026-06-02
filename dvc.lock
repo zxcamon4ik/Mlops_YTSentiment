@@ -3,10 +3,14 @@ stages:
   data_ingestion:
     cmd: python src/data/data_ingestion.py
     deps:
+    - path: data/reddit.csv
+      hash: md5
+      md5: 38ee083169162dbac0cb07c80ac0f04e
+      size: 6888934
     - path: src/data/data_ingestion.py
       hash: md5
-      md5: 8d6c4d78ae0e370ff4d99556ddbf505f
-      size: 4132
+      md5: ad7be03b298493400c6bc7917e767561
+      size: 4146
     params:
       params.yaml:
         data_ingestion.test_size: 0.2
@@ -27,10 +31,14 @@ stages:
       hash: md5
       md5: 70faef66e6135c49f7f02db4a55e9fdd
       size: 5541654
+    - path: src/common/text_preprocessing.py
+      hash: md5
+      md5: 24617fc689acfac949cc625de0675286
+      size: 3491
     - path: src/data/data_preprocessing.py
       hash: md5
-      md5: f997a07ec5d812b43a2bfa7ca740e7a0
-      size: 3715
+      md5: f3077512f730ca673af2e30cbfba349f
+      size: 2547
     outs:
     - path: data/interim
       hash: md5
@@ -44,10 +52,18 @@ stages:
       hash: md5
       md5: 86284f4698366b0f2ee05c211c0e9453
       size: 4104889
+    - path: src/common/text_preprocessing.py
+      hash: md5
+      md5: 24617fc689acfac949cc625de0675286
+      size: 3491
     - path: src/model/model_building.py
       hash: md5
-      md5: 7535a489e792c486bd48d008c4e673c4
-      size: 5474
+      md5: 40cc2bdba7a6759e00b8d7321d51f93e
+      size: 4642
+    - path: src/model/pipeline.py
+      hash: md5
+      md5: 3d3099cf92fa40fb650211018cfb6989
+      size: 971
     params:
       params.yaml:
         model_building.learning_rate: 0.09
@@ -58,14 +74,10 @@ stages:
         - 1
         - 3
     outs:
-    - path: lgbm_model.pkl
+    - path: sentiment_pipeline.pkl
       hash: md5
-      md5: db769b898afd198b43e0f2229dbbd81c
-      size: 3886735
-    - path: tfidf_vectorizer.pkl
-      hash: md5
-      md5: 4dbd9ffa2338e1284ca91fe522075f92
-      size: 36874
+      md5: e24bc324cd4665be21114787690e77ba
+      size: 3924051
   model_evaluation:
     cmd: python src/model/model_evaluation.py
     deps:
@@ -77,31 +89,39 @@ stages:
       hash: md5
       md5: 86284f4698366b0f2ee05c211c0e9453
       size: 4104889
-    - path: lgbm_model.pkl
+    - path: sentiment_pipeline.pkl
       hash: md5
-      md5: db769b898afd198b43e0f2229dbbd81c
-      size: 3886735
+      md5: e24bc324cd4665be21114787690e77ba
+      size: 3924051
+    - path: src/common/text_preprocessing.py
+      hash: md5
+      md5: 24617fc689acfac949cc625de0675286
+      size: 3491
+    - path: src/model/config.py
+      hash: md5
+      md5: 1fbacf611e2dd7233fbdae7e42c15477
+      size: 2252
     - path: src/model/model_evaluation.py
       hash: md5
-      md5: 2f2a12dd552a0cea494adb86cb343749
-      size: 7266
-    - path: tfidf_vectorizer.pkl
-      hash: md5
-      md5: 4dbd9ffa2338e1284ca91fe522075f92
-      size: 36874
+      md5: 0402636267b506040b1e0606a676bddf
+      size: 6745
     outs:
     - path: experiment_info.json
       hash: md5
-      md5: a6eef1800dfed917975c2992025acd6a
-      size: 84
+      md5: 86fa5ce2727196bf877ea13e75ea66b7
+      size: 124
   model_registration:
     cmd: python src/model/register_model.py
     deps:
     - path: experiment_info.json
       hash: md5
-      md5: a6eef1800dfed917975c2992025acd6a
-      size: 84
+      md5: 86fa5ce2727196bf877ea13e75ea66b7
+      size: 124
+    - path: src/model/config.py
+      hash: md5
+      md5: 1fbacf611e2dd7233fbdae7e42c15477
+      size: 2252
     - path: src/model/register_model.py
       hash: md5
-      md5: 5326e2045bb09d5b0abc705ad7b372db
-      size: 2511
+      md5: 3ee2f31ac69f21e33b5a9b7555d7f9f4
+      size: 3635

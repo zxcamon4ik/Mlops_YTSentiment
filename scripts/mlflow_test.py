@@ -5,10 +5,12 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 
+from src.model.config import get_mlflow_tracking_uri
+
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 # Set the MLflow tracking URI
-mlflow.set_tracking_uri(os.environ["SERVER_URL"])
+mlflow.set_tracking_uri(get_mlflow_tracking_uri())
 
 # Start an MLflow run
 with mlflow.start_run():
