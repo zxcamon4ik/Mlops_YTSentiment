@@ -4,7 +4,7 @@ pandas
 jupyterlab
 ipykernel
 seaborn 
-scikit-learn==1.8.0
+scikit-learn==1.5.2
 wordcloud
 
 # production

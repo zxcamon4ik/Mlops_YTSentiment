@@ -1,6 +1,9 @@
 **
 
 !.env.example
+!.dockerignore
+!Dockerfile
+!docker-compose.yml
 !data/
 !.gitignore
 !environment.yml

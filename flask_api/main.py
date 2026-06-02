@@ -88,7 +88,10 @@ def load_model_and_vectorizer(model_name, model_version, vectorizer_path):
 #model, vectorizer = load_model("./lgbm_model.pkl", "./tfidf_vectorizer.pkl")  
 
 # Initialize the model and vectorizer
-model, vectorizer = load_model_and_vectorizer("my_model", "4", "./tfidf_vectorizer.pkl")  # Update paths and versions as needed
+MODEL_NAME = os.getenv("MODEL_NAME", "my_model")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "4")
+VECTORIZER_PATH = os.getenv("VECTORIZER_PATH", "./tfidf_vectorizer.pkl")
+model, vectorizer = load_model_and_vectorizer(MODEL_NAME, MODEL_VERSION, VECTORIZER_PATH)
 
 @app.route('/')
 def home():

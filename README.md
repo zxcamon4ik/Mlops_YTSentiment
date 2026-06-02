@@ -220,10 +220,36 @@ python flask_api/main.py
 
 It listens on `http://localhost:5000` when started directly.
 
-Important current behavior: `flask_api/main.py` loads MLflow model
-`my_model`, version `4`, on application startup and loads
-`./tfidf_vectorizer.pkl` locally. That model version and vectorizer must exist
-and be compatible for the API to start and serve predictions.
+Important current behavior: `flask_api/main.py` loads the MLflow model on
+application startup and loads `./tfidf_vectorizer.pkl` locally. The defaults are
+`MODEL_NAME=my_model`, `MODEL_VERSION=4`, and
+`VECTORIZER_PATH=./tfidf_vectorizer.pkl`, but each can be overridden through
+environment variables.
+
+### Run Locally With Docker Compose
+
+Docker Compose starts a local MLflow tracking server and the Flask API:
+
+```bash
+docker compose up --build
+```
+
+Services:
+
+| Service | URL |
+| --- | --- |
+| Flask API | `http://localhost:5000` |
+| MLflow UI | `http://localhost:5001` |
+
+The compose setup stores MLflow metadata and artifacts in the `mlflow-data`
+Docker volume. The Flask container uses `SERVER_URL=http://mlflow:5000` and
+defaults to `MODEL_VERSION=1`, which is usually the first model version created
+in a fresh local registry.
+
+Before the Flask API can start successfully, register a compatible model in the
+local MLflow server and make sure `tfidf_vectorizer.pkl` exists in the project
+root. From the host, set `SERVER_URL=http://localhost:5001` before running the
+DVC pipeline or registration scripts against the local server.
 
 ### 5. Configure and Load the Chrome Extension
 
